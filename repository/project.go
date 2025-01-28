@@ -6,15 +6,34 @@ import (
 	"gorm.io/gorm"
 )
 
-func GetAllProjects(db *gorm.DB) ([]models.Project, error) {
+func GetAllProjects(db *gorm.DB, userID uint) ([]models.Project, error) {
 	var projects []models.Project
-	err := db.Find(&projects).Error
-	return projects, err
+
+	err := db.Preload("Collaborators").Where("owner_id = ?", userID).Find(&projects).Error
+	if err != nil {
+		return nil, err
+	}
+
+	var collaboratorProjects []models.Project
+	err = db.Joins("JOIN project_collaborators ON project_collaborators.project_id = projects.id").
+		Preload("Collaborators").
+		Where("project_collaborators.user_id = ?", userID).
+		Find(&collaboratorProjects).Error
+	if err != nil {
+		return nil, err
+	}
+
+	projects = append(projects, collaboratorProjects...)
+	return projects, nil
 }
 
-func GetProjectByID(db *gorm.DB, projectID uint) (models.Project, error) {
+func GetProjectByID(db *gorm.DB, projectID uint, userID uint) (models.Project, error) {
 	var project models.Project
-	err := db.First(&project, projectID).Error
+
+	err := db.Preload("Collaborators").
+		Where("id = ? AND (owner_id = ? OR id IN (SELECT project_id FROM project_collaborators WHERE user_id = ?))", projectID, userID, userID).
+		First(&project).Error
+
 	return project, err
 }
 

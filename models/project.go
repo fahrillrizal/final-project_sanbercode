@@ -9,6 +9,7 @@ type Project struct {
 	OwnerID     uint      `gorm:"not null" json:"owner_id"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	Collaborators []ProjectCollaborator `gorm:"foreignKey:ProjectID" json:"collaborators"`
 }
 
 type ProjectCollaborator struct {

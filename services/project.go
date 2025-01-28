@@ -9,40 +9,31 @@ import (
 )
 
 func GetAllProjectsService(db *gorm.DB, userID uint) ([]models.Project, error) {
-    var projects []models.Project
-
-    err := db.Where("owner_id = ?", userID).Find(&projects).Error
-    if err != nil {
-        return nil, err
-    }
-
-    var collaboratorProjects []models.Project
-    err = db.Joins("JOIN project_collaborators ON project_collaborators.project_id = projects.id").
-        Where("project_collaborators.user_id = ?", userID).
-        Find(&collaboratorProjects).Error
-    if err != nil {
-        return nil, err
-    }
-
-    projects = append(projects, collaboratorProjects...)
-
-    return projects, nil
+	return repository.GetAllProjects(db, userID)
 }
 
 func GetProjectByIDService(db *gorm.DB, projectID uint, userID uint) (models.Project, error) {
-    var project models.Project
+	project, err := repository.GetProjectByID(db, projectID, userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return models.Project{}, errors.New("project tidak ditemukan")
+		}
+		return models.Project{}, err
+	}
 
-    err := db.Where("id = ? AND (owner_id = ? OR id IN (SELECT project_id FROM project_collaborators WHERE user_id = ?))", projectID, userID, userID).
-        First(&project).Error
+	isCollaborator := false
+	for _, collaborator := range project.Collaborators {
+		if collaborator.UserID == userID {
+			isCollaborator = true
+			break
+		}
+	}
 
-    if err != nil {
-        if errors.Is(err, gorm.ErrRecordNotFound) {
-            return models.Project{}, errors.New("anda tidak memiliki akses untuk project ini")
-        }
-        return models.Project{}, err
-    }
+	if project.OwnerID != userID && !isCollaborator {
+		return models.Project{}, errors.New("anda tidak memiliki akses ke project ini")
+	}
 
-    return project, nil
+	return project, nil
 }
 
 func CreateProjectService(db *gorm.DB, project *models.Project) error {
@@ -58,26 +49,28 @@ func DeleteProjectService(db *gorm.DB, projectID uint, userID uint) error {
 }
 
 func AddCollaboratorService(db *gorm.DB, projectID, userID, ownerID uint) error {
-	isOwner, err := repository.IsOwner(db, projectID, ownerID)
-	if err != nil {
-		return err
-	}
-	if !isOwner {
-		return errors.New("tidak diperbolehkan karena anda bukan owner")
-	}
+    isOwner, err := repository.IsOwner(db, projectID, ownerID)
+    if err != nil {
+        return err
+    }
+    if !isOwner {
+        return errors.New("tidak diperbolehkan karena anda bukan owner")
+    }
 
-	return repository.InviteCollaborator(db, projectID, userID)
+    return repository.InviteCollaborator(db, projectID, userID)
 }
 
 func RemoveCollaboratorService(db *gorm.DB, projectID, userID, ownerID uint) error {
-	isOwner, err := repository.IsOwner(db, projectID, ownerID)
+    isOwner, err := repository.IsOwner(db, projectID, ownerID)
+    if err != nil {
+        return err
+    }
 
-	if err != nil {
-		return err
-	}
-	if !isOwner {
-		return errors.New("tidak diperbolehkan karena anda bukan owner")
-	}
+    if !isOwner {
+        if userID != ownerID {
+            return errors.New("tidak diperbolehkan karena anda bukan owner atau tidak dapat menghapus orang lain selain diri anda sendiri")
+        }
+    }
 
-	return repository.RemoveCollaborator(db, projectID, userID)
+    return repository.RemoveCollaborator(db, projectID, userID)
 }

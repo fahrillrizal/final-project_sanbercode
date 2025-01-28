@@ -17,36 +17,36 @@ type ProjectInput struct {
 
 
 func GetProjectsController(c *gin.Context) {
-    db := c.MustGet("db").(*gorm.DB)
-    userID := c.MustGet("user_id").(uint)
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.MustGet("user_id").(uint)
 
-    projects, err := services.GetAllProjectsService(db, userID)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-        return
-    }
+	projects, err := services.GetAllProjectsService(db, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
 
-    c.JSON(http.StatusOK, gin.H{"data": projects})
+	c.JSON(http.StatusOK, gin.H{"data": projects})
 }
 
 func GetProjectByIDController(c *gin.Context) {
-    db := c.MustGet("db").(*gorm.DB)
-    userID := c.MustGet("user_id").(uint)
-    projectIDStr := c.Param("id")
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.MustGet("user_id").(uint)
+	projectIDStr := c.Param("id")
 
-    projectID, err := strconv.ParseUint(projectIDStr, 10, 64)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
-        return
-    }
+	projectID, err := strconv.ParseUint(projectIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
 
-    project, err := services.GetProjectByIDService(db, uint(projectID), userID)
-    if err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-        return
-    }
+	project, err := services.GetProjectByIDService(db, uint(projectID), userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
 
-    c.JSON(http.StatusOK, gin.H{"data": project})
+	c.JSON(http.StatusOK, gin.H{"data": project})
 }
 
 func AddProjectController(c *gin.Context) {
@@ -127,58 +127,59 @@ func DeleteProjectController(c *gin.Context) {
 }
 
 func AddCollaboratorController(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
-	ownerID := c.MustGet("user_id").(uint)
+    db := c.MustGet("db").(*gorm.DB)
+    ownerID := c.MustGet("user_id").(uint)
 
-	projectIDStr := c.Param("id")
-	projectID, err := strconv.ParseUint(projectIDStr, 10, 64)
+    projectIDStr := c.Param("id")
+    projectID, err := strconv.ParseUint(projectIDStr, 10, 64)
 
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
-		return
-	}
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+        return
+    }
 
-	var input struct {
-		UserID uint `json:"user_id" binding:"required"`
-	}
-	
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+    var input struct {
+        UserID uint `json:"user_id" binding:"required"`
+    }
+    
+    if err := c.ShouldBindJSON(&input); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
 
-	if err := services.AddCollaboratorService(db, uint(projectID), input.UserID, ownerID); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
+    // Menambahkan collaborator
+    if err := services.AddCollaboratorService(db, uint(projectID), input.UserID, ownerID); err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        return
+    }
 
-	c.JSON(http.StatusOK, gin.H{"message": "Collaborator berhasil ditambahkan"})
+    c.JSON(http.StatusOK, gin.H{"message": "Collaborator berhasil ditambahkan"})
 }
 
 func RemoveCollaboratorController(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
-	ownerID := c.MustGet("user_id").(uint)
+    db := c.MustGet("db").(*gorm.DB)
+    ownerID := c.MustGet("user_id").(uint)
 
-	projectIDStr := c.Param("id")
-	projectID, err := strconv.ParseUint(projectIDStr, 10, 64)
+    projectIDStr := c.Param("id")
+    projectID, err := strconv.ParseUint(projectIDStr, 10, 64)
 
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
-		return
-	}
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+        return
+    }
 
-	var input struct {
-		UserID uint `json:"user_id" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+    var input struct {
+        UserID uint `json:"user_id" binding:"required"`
+    }
+    if err := c.ShouldBindJSON(&input); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
 
-	if err := services.RemoveCollaboratorService(db, uint(projectID), input.UserID, ownerID); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
+    if err := services.RemoveCollaboratorService(db, uint(projectID), input.UserID, ownerID); err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        return
+    }
 
-	c.JSON(http.StatusOK, gin.H{"message": "Collaborator berhasil dihapus"})
+    c.JSON(http.StatusOK, gin.H{"message": "Collaborator berhasil dihapus"})
 }

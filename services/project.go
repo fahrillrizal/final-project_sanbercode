@@ -8,22 +8,41 @@ import (
 	"PA/repository"
 )
 
-func GetAllProjectsService(db *gorm.DB) ([]models.Project, error) {
-	return repository.GetAllProjects(db)
+func GetAllProjectsService(db *gorm.DB, userID uint) ([]models.Project, error) {
+    var projects []models.Project
+
+    err := db.Where("owner_id = ?", userID).Find(&projects).Error
+    if err != nil {
+        return nil, err
+    }
+
+    var collaboratorProjects []models.Project
+    err = db.Joins("JOIN project_collaborators ON project_collaborators.project_id = projects.id").
+        Where("project_collaborators.user_id = ?", userID).
+        Find(&collaboratorProjects).Error
+    if err != nil {
+        return nil, err
+    }
+
+    projects = append(projects, collaboratorProjects...)
+
+    return projects, nil
 }
 
-func GetProjectByIDService(db *gorm.DB, projectID uint) (models.Project, error) {
-	var project models.Project
-	err := db.First(&project, projectID).Error
+func GetProjectByIDService(db *gorm.DB, projectID uint, userID uint) (models.Project, error) {
+    var project models.Project
 
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return models.Project{}, nil
-		}
-		return models.Project{}, err
-	}
+    err := db.Where("id = ? AND (owner_id = ? OR id IN (SELECT project_id FROM project_collaborators WHERE user_id = ?))", projectID, userID, userID).
+        First(&project).Error
 
-	return project, nil
+    if err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return models.Project{}, errors.New("anda tidak memiliki akses untuk project ini")
+        }
+        return models.Project{}, err
+    }
+
+    return project, nil
 }
 
 func CreateProjectService(db *gorm.DB, project *models.Project) error {

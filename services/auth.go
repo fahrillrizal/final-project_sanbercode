@@ -29,8 +29,8 @@ func LoginService(db *gorm.DB, identifier, password string) (string, error) {
 	}
 
 	if !utils.CheckPassword(password, user.Password) {
-		return "", errors.New("invalid password")
-	}
+        return "", errors.New("invalid password")
+    }
 
 	token, err := utils.GenerateJWT(user)
 	if err != nil {
@@ -40,30 +40,35 @@ func LoginService(db *gorm.DB, identifier, password string) (string, error) {
 	return token, nil
 }
 
-func RegisterService(db *gorm.DB, user models.User) error {
-	if user.Email != "" && !utils.IsValidEmail(user.Email) {
-		return errors.New("invalid email format")
-	}
+func RegisterService(db *gorm.DB, input models.UserAuth) error {
+    if input.Email != "" && !utils.IsValidEmail(input.Email) {
+        return errors.New("invalid email format")
+    }
 
-	if strings.Contains(user.Username, "@") {
+    if strings.Contains(input.Username, "@") {
         return errors.New("username cannot contain '@'")
     }
 
-	if user.Password != "" && !utils.IsValidPassword(user.Password) {
-		return errors.New("invalid password format")
-	}
+    if !utils.IsValidPassword(input.Password) {
+        return errors.New("invalid password format")
+    }
 
-	hashedPass, err := utils.HashPassword(user.Password)
-	if err != nil {
-		return errors.New("gagal Hash Password")
-	}
-	user.Password = hashedPass
+    user := models.User{
+        Username: input.Username,
+        Email:    input.Email,
+    }
 
-	if err := repository.CreateUser(db, user); err != nil {
-		return err
-	}
+    hashedPass, err := utils.HashPassword(input.Password)
+    if err != nil {
+        return errors.New("gagal hash password")
+    }
+    user.Password = hashedPass
 
-	return nil
+    if err := repository.CreateUser(db, user); err != nil {
+        return err
+    }
+
+    return nil
 }
 
 func ParseTokenService(tokenString string) (*models.User, error) {

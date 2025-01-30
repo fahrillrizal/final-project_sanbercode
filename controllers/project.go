@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"PA/models"
 	"PA/services"
-	
+	"strings"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -14,7 +14,6 @@ type ProjectInput struct {
 	Name string `json:"name" binding:"required"`
 	Description string `json:"description"`
 }
-
 
 func GetProjectsController(c *gin.Context) {
 	db := c.MustGet("db").(*gorm.DB)
@@ -32,7 +31,7 @@ func GetProjectsController(c *gin.Context) {
 func GetProjectByIDController(c *gin.Context) {
 	db := c.MustGet("db").(*gorm.DB)
 	userID := c.MustGet("user_id").(uint)
-	projectIDStr := c.Param("id")
+	projectIDStr := c.Param("project_id")
 
 	projectID, err := strconv.ParseUint(projectIDStr, 10, 64)
 	if err != nil {
@@ -82,7 +81,7 @@ func EditProjectController(c *gin.Context) {
 
 	db := c.MustGet("db").(*gorm.DB)
 	userID := c.MustGet("user_id").(uint)
-	projectIDStr := c.Param("id") 
+	projectIDStr := c.Param("project_id") 
 
 	projectID, err := strconv.ParseUint(projectIDStr, 10, 64)
 	if err != nil {
@@ -100,37 +99,45 @@ func EditProjectController(c *gin.Context) {
 	project.Description = input.Description
 
 	if err := services.UpdateProjectService(db, &project, userID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal untuk edit project"})
-		return
-	}
+        c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+        return
+    }
 
 	c.JSON(http.StatusOK, gin.H{"data": project})
 }
 
 func DeleteProjectController(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
-	userID := c.MustGet("user_id").(uint)
-	projectIDStr := c.Param("id") 
-
-	projectID, err := strconv.ParseUint(projectIDStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
-		return
-	}
-
-	if err := services.DeleteProjectService(db, uint(projectID), userID); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Project berhasil dihapus"})
+    db := c.MustGet("db").(*gorm.DB)
+    userID := c.MustGet("user_id").(uint)
+    
+    projectID, err := strconv.ParseUint(c.Param("project_id"), 10, 64)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+        return
+    }
+    
+    if err := services.DeleteProjectService(db, uint(projectID), userID); err != nil {
+        errorMsg := gin.H{"error": err.Error()}
+        status := http.StatusInternalServerError
+        
+        if strings.Contains(err.Error(), "unauthorized") {
+            status = http.StatusForbidden
+        } else if strings.Contains(err.Error(), "tidak ditemukan") {
+            status = http.StatusNotFound
+        }
+        
+        c.JSON(status, errorMsg)
+        return
+    }
+    
+    c.JSON(http.StatusOK, gin.H{"message": "Project berhasil dihapus"})
 }
 
 func AddCollaboratorController(c *gin.Context) {
     db := c.MustGet("db").(*gorm.DB)
     ownerID := c.MustGet("user_id").(uint)
 
-    projectIDStr := c.Param("id")
+    projectIDStr := c.Param("project_id")
     projectID, err := strconv.ParseUint(projectIDStr, 10, 64)
 
     if err != nil {
@@ -147,7 +154,6 @@ func AddCollaboratorController(c *gin.Context) {
         return
     }
 
-    // Menambahkan collaborator
     if err := services.AddCollaboratorService(db, uint(projectID), input.UserID, ownerID); err != nil {
         c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
         return
@@ -160,7 +166,7 @@ func RemoveCollaboratorController(c *gin.Context) {
     db := c.MustGet("db").(*gorm.DB)
     ownerID := c.MustGet("user_id").(uint)
 
-    projectIDStr := c.Param("id")
+    projectIDStr := c.Param("project_id")
     projectID, err := strconv.ParseUint(projectIDStr, 10, 64)
 
     if err != nil {

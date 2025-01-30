@@ -41,11 +41,34 @@ func CreateProjectService(db *gorm.DB, project *models.Project) error {
 }
 
 func UpdateProjectService(db *gorm.DB, project *models.Project, userID uint) error {
-	return repository.UpdateProject(db, project)
+    isOwner, err := repository.IsOwner(db, project.ID, userID)
+    if err != nil {
+        return err
+    }
+    if !isOwner {
+        return errors.New("unauthorized: hanya owner yang bisa mengupdate project")
+    }
+    
+    return repository.UpdateProject(db, project, userID)
 }
 
 func DeleteProjectService(db *gorm.DB, projectID uint, userID uint) error {
-	return repository.DeleteProject(db, projectID, userID)
+    isOwner, err := repository.IsOwner(db, projectID, userID)
+    if err != nil {
+        return err
+    }
+    if !isOwner {
+        return errors.New("unauthorized: hanya owner yang bisa menghapus project")
+    }
+    
+    if err := repository.DeleteProject(db, projectID, userID); err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return errors.New("project tidak ditemukan")
+        }
+        return err
+    }
+    
+    return nil
 }
 
 func AddCollaboratorService(db *gorm.DB, projectID, userID, ownerID uint) error {

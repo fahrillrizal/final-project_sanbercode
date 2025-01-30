@@ -1,10 +1,10 @@
 package middleware
 
 import (
-	"PA/utils"
-	"net/http"
-	"strings"
-	"github.com/gin-gonic/gin"
+    "PA/utils"
+    "net/http"
+    "strings"
+    "github.com/gin-gonic/gin"
 )
 
 func AuthMiddleware() gin.HandlerFunc {
@@ -19,14 +19,8 @@ func AuthMiddleware() gin.HandlerFunc {
         tokenString = strings.TrimPrefix(tokenString, "Bearer ")        
 
         token, user, err := utils.ParseJWT(tokenString)
-        if err != nil {
-            c.JSON(http.StatusUnauthorized, gin.H{"error": "Error parsing token"})
-            c.Abort()
-            return
-        }
-
-        if !token.Valid {
-            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid atau token expired"})
+        if err != nil || token == nil || !token.Valid {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
             c.Abort()
             return
         }

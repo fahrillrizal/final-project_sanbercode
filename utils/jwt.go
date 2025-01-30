@@ -20,17 +20,18 @@ func init() {
 var SecretKey = []byte(os.Getenv("JWT_SECRET_KEY"))
 
 func GenerateJWT(user models.User) (string, error) {
-	claims := jwt.MapClaims{}
-	claims["id"] = user.ID
-	claims["username"] = user.Username
-	claims["exp"] = time.Now().Add(time.Hour * 72).Unix()
+    claims := jwt.MapClaims{
+        "id":       user.ID,
+        "username": user.Username,
+        "exp":      time.Now().Add(time.Hour * 72).Unix(),
+    }
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(SecretKey)
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+    return token.SignedString(SecretKey)
 }
 
 func ParseJWT(tokenString string) (*jwt.Token, *models.User, error) {
-    token, err := jwt.ParseWithClaims(tokenString, &jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+    token, err := jwt.ParseWithClaims(tokenString, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
         return SecretKey, nil
     })
 
@@ -38,15 +39,15 @@ func ParseJWT(tokenString string) (*jwt.Token, *models.User, error) {
         return nil, nil, err
     }
 
-    if claims, ok := token.Claims.(*jwt.MapClaims); ok && token.Valid {
-        if id, ok := (*claims)["id"].(float64); ok {
+    if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+        if id, ok := claims["id"].(float64); ok {
             user := &models.User{
-                ID: uint(id),
-                Username: (*claims)["username"].(string),
+                ID:       uint(id),
+                Username: claims["username"].(string),
             }
             return token, user, nil
         }
     }
 
-    return nil, nil, errors.New("Invalid token claims")
+    return nil, nil, errors.New("invalid token claims")
 }

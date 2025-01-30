@@ -2,6 +2,7 @@ package models
 
 import "time"
 
+// @model
 type User struct {
 	ID uint `gorm:"primaryKey" json:"id"`
 	Username string `gorm:"unique;not null" json:"username"`
@@ -11,6 +12,7 @@ type User struct {
 	UpdatedAt time.Time `json:"-"`
 }
 
+// Validasi input untuk login agar input salah satu (email/username)
 type UserAuth struct {
     Username string `json:"username" binding:"required_without=Email"`
     Email    string `json:"email" binding:"required_without=Username"`

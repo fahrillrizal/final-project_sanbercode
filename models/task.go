@@ -2,6 +2,7 @@ package models
 
 import "time"
 
+// @model
 type Task struct {
     ID uint `gorm:"primaryKey" json:"id"`
     ProjectID uint `json:"project_id"`
@@ -14,6 +15,7 @@ type Task struct {
     Deadline time.Time `json:"deadline"`
 }
 
+// @model
 type TaskAssignment struct {
     ID uint `gorm:"primaryKey" json:"id"`
     TaskID uint `json:"task_id"`
@@ -21,6 +23,8 @@ type TaskAssignment struct {
     User User `gorm:"foreignKey:UserID" json:"-"`
     AssignedAt time.Time `json:"assigned_at"`
 }
+
+// User response digunakan agar saat response ok (200) hanya memunculkan username dan email
 
 type UserResponse struct {
     ID       uint   `json:"id"`

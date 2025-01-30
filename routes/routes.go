@@ -6,15 +6,22 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	docs "PA/docs"
+   	swaggerfiles "github.com/swaggo/files"
+   	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func SetupRouter(db *gorm.DB) *gin.Engine {
 	router := gin.Default()
 
+	docs.SwaggerInfo.BasePath = "/"
+
 	router.Use(func(c *gin.Context) {
 		c.Set("db", db)
 		c.Next()
 	})
+
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
 	router.POST("/api/register", controllers.Register)
 	router.POST("/api/login", controllers.Login)

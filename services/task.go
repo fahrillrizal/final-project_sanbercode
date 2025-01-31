@@ -98,6 +98,11 @@ func validateUsersInProject(db *gorm.DB, projectID uint, userIDs []uint) error {
 }
 
 func CreateTaskService(db *gorm.DB, projectID uint, task *models.Task, userIDs []uint, currentUserID uint) error {
+    var project models.Project
+    if err := db.First(&project, projectID).Error; err != nil {
+        return errors.New("project tidak ditemukan")
+    }
+
     isOwner, err := repository.IsOwner(db, projectID, currentUserID)
     if err != nil {
         return err

@@ -53,33 +53,30 @@ func UpdateProjectService(db *gorm.DB, project *models.Project, userID uint) err
 }
 
 func DeleteProjectService(db *gorm.DB, projectID uint, userID uint) error {
-    isOwner, err := repository.IsOwner(db, projectID, userID)
-    if err != nil {
-        return err
-    }
-    if !isOwner {
-        return errors.New("unauthorized: hanya owner yang bisa menghapus project")
-    }
-    
-    if err := repository.DeleteProject(db, projectID, userID); err != nil {
+    var project models.Project
+    if err := db.First(&project, projectID).Error; err != nil {
         if errors.Is(err, gorm.ErrRecordNotFound) {
             return errors.New("project tidak ditemukan")
         }
         return err
     }
-    
-    return nil
+    if project.OwnerID != userID {
+        return errors.New("unauthorized: hanya owner yang bisa menghapus project")
+    }
+    return repository.DeleteProject(db, projectID, userID)
 }
 
 func AddCollaboratorService(db *gorm.DB, projectID, userID, ownerID uint) error {
-    isOwner, err := repository.IsOwner(db, projectID, ownerID)
-    if err != nil {
+    var project models.Project
+    if err := db.First(&project, projectID).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return errors.New("project tidak ditemukan")
+        }
         return err
     }
-    if !isOwner {
+    if project.OwnerID != ownerID {
         return errors.New("tidak diperbolehkan karena anda bukan owner")
     }
-
     return repository.InviteCollaborator(db, projectID, userID)
 }
 
@@ -91,9 +88,15 @@ func RemoveCollaboratorService(db *gorm.DB, projectID, userID, ownerID uint) err
 
     if !isOwner {
         if userID != ownerID {
-            return errors.New("tidak diperbolehkan karena anda bukan owner atau tidak dapat menghapus orang lain selain diri anda sendiri")
+            return errors.New("tidak diperbolehkan menghapus collaborator lain kecuali diri sendiri")
         }
     }
 
-    return repository.RemoveCollaborator(db, projectID, userID)
+    err = repository.RemoveCollaborator(db, projectID, userID)
+    
+    if errors.Is(err, gorm.ErrRecordNotFound) {
+        return errors.New("collaborator tidak ditemukan di project ini")
+    }
+    
+    return err
 }

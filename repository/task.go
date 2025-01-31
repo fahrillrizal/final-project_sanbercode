@@ -51,7 +51,9 @@ func CreateTask(db *gorm.DB, task *models.Task, userIDs []uint) error {
                 return err
             }
         }
-        return tx.Preload("Assignments.User").Preload("Project").First(task).Error
+        return tx.Preload("Assignments", func(db *gorm.DB) *gorm.DB {
+            return db.Preload("User")
+        }).Preload("Project").First(task).Error
     })
 }
 
@@ -73,7 +75,9 @@ func UpdateTask(db *gorm.DB, task *models.Task, userIDs []uint) error {
                 return err
             }
         }
-        return tx.Preload("Assignments.User").Preload("Project").First(task).Error
+        return tx.Preload("Assignments", func(db *gorm.DB) *gorm.DB {
+            return db.Preload("User")
+        }).Preload("Project").First(task).Error
     })
 }
 

@@ -89,7 +89,14 @@ func InviteCollaborator(db *gorm.DB, projectID, userID uint) error {
 }
 
 func RemoveCollaborator(db *gorm.DB, projectID, userID uint) error {
-	return db.Where("project_id = ? AND user_id = ?", projectID, userID).Delete(&models.ProjectCollaborator{}).Error
+    result := db.Where("project_id = ? AND user_id = ?", projectID, userID).Delete(&models.ProjectCollaborator{})
+    if result.Error != nil {
+        return result.Error
+    }
+    if result.RowsAffected == 0 {
+        return gorm.ErrRecordNotFound
+    }
+    return nil
 }
 
 func IsOwner(db *gorm.DB, projectID, userID uint) (bool, error) {
